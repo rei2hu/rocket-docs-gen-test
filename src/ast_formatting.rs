@@ -1,3 +1,7 @@
+/// some general formatting for various ast nodes. might update this eventually
+/// for better output or use type aliases so im not dumping String everywhere
+/// and getting confused
+
 pub fn format_ret_type(ty: &syn::ReturnType) -> String {
     match ty {
         syn::ReturnType::Default => "()".to_string(),
@@ -26,7 +30,7 @@ mod tests {
         assert_eq!(
             format_type(&syn::parse_str("()").unwrap()),
             "()",
-            "Formatting the default type should always return ()"
+            "Formatting the unit type should always return ()"
         );
     }
 

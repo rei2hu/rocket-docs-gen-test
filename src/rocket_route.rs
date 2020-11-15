@@ -1,11 +1,17 @@
+/// the only functions we are interested in are ones with the route attributes.
+/// these represent the routes that are exposed.
+
 #[derive(Debug, PartialEq)]
 pub struct RocketRoute {
+    ident: String,
+    handler: Function,
+
+    // from attribute
     method: String,
     path: String,
     rank: Option<i32>,
     format: Option<String>,
     data: Option<String>,
-    handler: Function,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -15,6 +21,9 @@ struct Function {
 }
 
 impl RocketRoute {
+    // each attribute defines its own route, it seems like you can only put
+    // one route attribute on a function anyways, so really returning a
+    // vector isnt an actual case since the length should always be 1
     pub fn parse_fn(function: &syn::ItemFn) -> Vec<Self> {
         let handler = Function {
             args: function
@@ -44,9 +53,6 @@ impl RocketRoute {
                 || str == "patch"
         }
 
-        // each attribute defines its own route, it seems like you can only put
-        // one route attribute on a function anyways, so really returning a
-        // vector isnt an actual case since the length should always be 1
         function
             .attrs
             .iter()
@@ -96,6 +102,7 @@ impl RocketRoute {
                         // }
 
                         l.path.get_ident().map(|ident| RocketRoute {
+                            ident: crate::ast_formatting::format_idnt(&function.sig.ident),
                             method: crate::ast_formatting::format_idnt(ident),
 
                             // want a better way to do this like reducing into
@@ -149,6 +156,7 @@ mod test {
         assert_eq!(
             result,
             vec![RocketRoute {
+                ident: "my_fn".to_string(),
                 method: "post".to_string(),
                 path: "/some/path".to_string(),
                 rank: None,
@@ -194,7 +202,7 @@ mod test {
                 #[private]
                 #[not_rocket(\"/some/path\", format = \"application/json\")]
                 #[head(\"/\", rank=12)]
-                fn my_fn(arg14: String, arg2: Option<Auth>) -> i32 {
+                fn my_fn2(arg14: String, arg2: Option<Auth>) -> i32 {
 
                 }
                 ",
@@ -204,6 +212,7 @@ mod test {
         assert_eq!(
             result,
             vec![RocketRoute {
+                ident: "my_fn2".to_string(),
                 method: "head".to_string(),
                 path: "/".to_string(),
                 rank: Some(12),

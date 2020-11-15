@@ -1,8 +1,19 @@
+/// there are at least 2 cases where we would be interested in structs:
+///   1. request guards or parameter guards
+///   2. when it's being used in the response
+/// in the first scenario, it could be any struct
+/// in the second scenario, it should derive Responder and also have a response
+/// attrbute with status/content_type information
+
 #[derive(Debug, PartialEq)]
 pub struct RocketStruct {
     ident: String,
     // so for unnamed ill just go with (0, type), (1, type) like a fake array
     fields: Vec<(String, String)>,
+
+    // from attribute, if deriving responder
+    status: Option<u8>,
+    content_type: Option<String>,
 }
 
 impl RocketStruct {
@@ -35,6 +46,8 @@ impl RocketStruct {
         RocketStruct {
             ident: crate::ast_formatting::format_idnt(&s.ident),
             fields,
+            status: None,
+            content_type: None,
         }
     }
 }
@@ -65,7 +78,9 @@ mod test {
                     ("field1".to_string(), "i32".to_string()),
                     ("field2".to_string(), "AnotherStruct".to_string()),
                     ("field3".to_string(), "(i32 , u8)".to_string())
-                ]
+                ],
+                status: None,
+                content_type: None,
             },
             "Parses struct properly"
         );
@@ -88,7 +103,9 @@ mod test {
                 fields: vec![
                     ("0".to_string(), "i32".to_string()),
                     ("1".to_string(), "i32".to_string())
-                ]
+                ],
+                status: None,
+                content_type: None,
             },
             "Parses struct properly"
         );

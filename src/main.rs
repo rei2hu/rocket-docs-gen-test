@@ -17,6 +17,7 @@ fn main() {
         format!(\"Hello, {} year old named {}!\", age, name)
     }
 
+    #[derive(Responder)]
     pub enum LoginResponse {
         #[response(status = 200, content_type = \"text/plain\")]
         Success(i32),
