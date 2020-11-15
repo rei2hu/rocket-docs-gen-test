@@ -1,3 +1,5 @@
+use crate::rocket_attribute::{ResponseAttribute, RocketAttribute};
+
 /// there are at least 2 cases where we would be interested in structs:
 ///   1. request guards or parameter guards
 ///   2. when it's being used in the response
@@ -10,14 +12,13 @@ pub struct RocketStruct {
     ident: String,
     // so for unnamed ill just go with (0, type), (1, type) like a fake array
     fields: Vec<(String, String)>,
-
-    // from attribute, if deriving responder
-    status: Option<u8>,
-    content_type: Option<String>,
+    response: Option<ResponseAttribute>,
 }
 
 impl RocketStruct {
     pub fn parse_struct(s: &syn::ItemStruct) -> Self {
+        let attrs = RocketAttribute::from_struct(s);
+
         let fields = match s.fields.to_owned() {
             syn::Fields::Named(fields) => fields
                 .named
@@ -46,8 +47,13 @@ impl RocketStruct {
         RocketStruct {
             ident: crate::ast_formatting::format_idnt(&s.ident),
             fields,
-            status: None,
-            content_type: None,
+            response: attrs.into_iter().find_map(|attr| {
+                if let RocketAttribute::Response(response) = attr {
+                    Some(response)
+                } else {
+                    None
+                }
+            }),
         }
     }
 }
@@ -79,8 +85,7 @@ mod test {
                     ("field2".to_string(), "AnotherStruct".to_string()),
                     ("field3".to_string(), "(i32 , u8)".to_string())
                 ],
-                status: None,
-                content_type: None,
+                response: None,
             },
             "Parses struct properly"
         );
@@ -104,8 +109,32 @@ mod test {
                     ("0".to_string(), "i32".to_string()),
                     ("1".to_string(), "i32".to_string())
                 ],
-                status: None,
-                content_type: None,
+                response: None,
+            },
+            "Parses struct properly"
+        );
+    }
+
+    #[test]
+    fn parses_structs_with_response_attribute() {
+        let result = RocketStruct::parse_struct(
+            &syn::parse_str(
+                "
+                #[response(status=404)]
+                struct MyResponse(String);
+                ",
+            )
+            .unwrap(),
+        );
+        assert_eq!(
+            result,
+            RocketStruct {
+                ident: "MyResponse".to_string(),
+                fields: vec![("0".to_string(), "String".to_string())],
+                response: Some(ResponseAttribute {
+                    status: 404,
+                    content_type: None
+                }),
             },
             "Parses struct properly"
         );

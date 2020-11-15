@@ -1,3 +1,5 @@
+use crate::rocket_attribute::{RocketAttribute, RouteAttribute};
+
 /// the only functions we are interested in are ones with the route attributes.
 /// these represent the routes that are exposed.
 
@@ -5,13 +7,7 @@
 pub struct RocketRoute {
     ident: String,
     handler: Function,
-
-    // from attribute
-    method: String,
-    path: String,
-    rank: Option<i32>,
-    format: Option<String>,
-    data: Option<String>,
+    route: RouteAttribute,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -21,117 +17,40 @@ struct Function {
 }
 
 impl RocketRoute {
-    // each attribute defines its own route, it seems like you can only put
-    // one route attribute on a function anyways, so really returning a
-    // vector isnt an actual case since the length should always be 1
-    pub fn parse_fn(function: &syn::ItemFn) -> Vec<Self> {
-        let handler = Function {
-            args: function
-                .sig
-                .inputs
-                .iter()
-                .filter_map(|kv| match kv {
-                    syn::FnArg::Receiver(_) => None,
-                    syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => Some((
-                        crate::ast_formatting::format_pat(pat),
-                        crate::ast_formatting::format_type(ty),
-                    )),
-                })
-                .collect(),
-            ret: crate::ast_formatting::format_ret_type(&function.sig.output),
-        };
+    pub fn parse_fn(function: &syn::ItemFn) -> Option<Self> {
+        let attrs = RocketAttribute::from_fn(function);
 
-        // TODO: support for #[route(...)]
-        fn is_valid_route_attribute(ident: &syn::Ident) -> bool {
-            let str = crate::ast_formatting::format_idnt(ident);
-            str == "get"
-                || str == "put"
-                || str == "post"
-                || str == "delete"
-                || str == "head"
-                || str == "options"
-                || str == "patch"
-        }
-
-        function
-            .attrs
-            .iter()
-            .filter_map(|attr| {
-                attr.parse_meta().ok().and_then(|meta| match meta {
-                    syn::Meta::List(l)
-                        if l.path.get_ident().map_or(false, is_valid_route_attribute) =>
-                    {
-                        let pairs = l
-                            .nested
-                            .iter()
-                            .filter_map(|kv| match kv {
-                                // assume the only one that isn't k=v is the path
-                                syn::NestedMeta::Lit(syn::Lit::Str(str)) => {
-                                    Some(("path".to_string(), str.value()))
-                                }
-                                // gather up k=v into tuples
-                                // anyway to consolidate these 2 cases?
-                                syn::NestedMeta::Meta(syn::Meta::NameValue(
-                                    syn::MetaNameValue {
-                                        path,
-                                        lit: syn::Lit::Int(int),
-                                        ..
-                                    },
-                                )) => path.get_ident().map(|ident| {
-                                    (crate::ast_formatting::format_idnt(ident), int.to_string())
-                                }),
-
-                                syn::NestedMeta::Meta(syn::Meta::NameValue(
-                                    syn::MetaNameValue {
-                                        path,
-                                        lit: syn::Lit::Str(str),
-                                        ..
-                                    },
-                                )) => path.get_ident().map(|ident| {
-                                    (crate::ast_formatting::format_idnt(ident), str.value())
-                                }),
-                                _ => None,
-                            })
-                            .collect::<Vec<(String, String)>>();
-
-                        // so theres a case where you have something like #[post
-                        // (not="a path")]. i dont think that's valid because
-                        // the compiler should complain about the attribute
-                        // if pairs.len() < 1 {
-                        //     return None;
-                        // }
-
-                        l.path.get_ident().map(|ident| RocketRoute {
-                            ident: crate::ast_formatting::format_idnt(&function.sig.ident),
-                            method: crate::ast_formatting::format_idnt(ident),
-
-                            // want a better way to do this like reducing into
-                            // a struct and spreading it inside somehow
-                            path: pairs
-                                .iter()
-                                .find(|(key, _)| key == "path")
-                                .unwrap()
-                                .1
-                                .to_owned(),
-                            rank: pairs
-                                .iter()
-                                .find(|(key, _)| key == "rank")
-                                .and_then(|pair| pair.1.parse().ok()),
-                            format: pairs
-                                .iter()
-                                .find(|(key, _)| key == "format")
-                                .map(|pair| pair.1.to_owned()),
-                            data: pairs
-                                .iter()
-                                .find(|(key, _)| key == "data")
-                                .map(|pair| pair.1.to_owned()),
-                            handler: handler.clone(),
+        // a function should have at least 1 route attribute to be important
+        // there can only be 1 route attribute per fn
+        if let Some(route_attr) = attrs.into_iter().find_map(|attr| {
+            if let RocketAttribute::Route(route_attr) = attr {
+                Some(route_attr)
+            } else {
+                None
+            }
+        }) {
+            Some(RocketRoute {
+                ident: crate::ast_formatting::format_idnt(&function.sig.ident),
+                handler: Function {
+                    args: function
+                        .sig
+                        .inputs
+                        .iter()
+                        .filter_map(|kv| match kv {
+                            syn::FnArg::Receiver(_) => None,
+                            syn::FnArg::Typed(syn::PatType { pat, ty, .. }) => Some((
+                                crate::ast_formatting::format_pat(pat),
+                                crate::ast_formatting::format_type(ty),
+                            )),
                         })
-                    }
-                    _ => None,
-                })
+                        .collect(),
+                    ret: crate::ast_formatting::format_ret_type(&function.sig.output),
+                },
+                route: route_attr,
             })
-            .collect::<Vec<RocketRoute>>()
+        } else {
+            None
+        }
     }
 }
 
@@ -155,13 +74,15 @@ mod test {
 
         assert_eq!(
             result,
-            vec![RocketRoute {
+            Some(RocketRoute {
                 ident: "my_fn".to_string(),
-                method: "post".to_string(),
-                path: "/some/path".to_string(),
-                rank: None,
-                format: Some("application/json".to_string()),
-                data: None,
+                route: RouteAttribute {
+                    method: "post".to_string(),
+                    path: "/some/path".to_string(),
+                    rank: None,
+                    format: Some("application/json".to_string()),
+                    data: None,
+                },
                 handler: Function {
                     args: vec![
                         ("arg1".to_string(), "String".to_string()),
@@ -169,7 +90,7 @@ mod test {
                     ],
                     ret: "Result < User , Error >".to_string()
                 }
-            }],
+            }),
             "Parses a function with a route attribute properly"
         )
     }
@@ -187,9 +108,8 @@ mod test {
             )
             .unwrap(),
         );
-        assert_eq!(
-            result.len(),
-            0,
+        assert!(
+            result.is_none(),
             "Filters out functions that do not have a route attribute"
         );
     }
@@ -211,13 +131,15 @@ mod test {
         );
         assert_eq!(
             result,
-            vec![RocketRoute {
+            Some(RocketRoute {
                 ident: "my_fn2".to_string(),
-                method: "head".to_string(),
-                path: "/".to_string(),
-                rank: Some(12),
-                format: None,
-                data: None,
+                route: RouteAttribute {
+                    method: "head".to_string(),
+                    path: "/".to_string(),
+                    rank: Some(12),
+                    format: None,
+                    data: None,
+                },
                 handler: Function {
                     args: vec![
                         ("arg14".to_string(), "String".to_string()),
@@ -225,7 +147,7 @@ mod test {
                     ],
                     ret: "i32".to_string()
                 }
-            }],
+            }),
             "Parses functions that have at least one route attribute"
         );
     }

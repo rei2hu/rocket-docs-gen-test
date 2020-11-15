@@ -4,6 +4,8 @@
 extern crate quote;
 
 mod ast_formatting;
+mod rocket_attribute;
+mod rocket_enum;
 mod rocket_route;
 mod rocket_struct;
 
@@ -39,6 +41,19 @@ fn main() {
         }
     }
 
+    #[derive(Responder)]
+    #[response(status=200)]
+    struct LogoutResponse {
+        body: String
+    }
+
+    #[post(\"/logout\", format=\"text\")]
+    fn logout(user: User) -> LogoutResponse {
+        LogoutResponse {
+            body: \"you're out\".to_string()
+        }
+    }
+
     fn main() {
         rocket::ignite().mount(\"/\", routes![hello]).launch();
     }
@@ -69,26 +84,15 @@ fn traverse_item(item: &syn::Item, depth: u32) {
             },
         ) => {
             let x = rocket_route::RocketRoute::parse_fn(function);
-            if x.len() > 0 {
-                println!("{:#?}", x);
+            if x.is_some() {
+                println!("{:#?}", x.unwrap());
             }
 
-            stmts
-                .iter()
-                .filter(|stmt| {
-                    if let syn::Stmt::Item(..) = stmt {
-                        true
-                    } else {
-                        false
-                    }
-                })
-                .for_each(|item| {
-                    if let syn::Stmt::Item(item) = item {
-                        traverse_item(item, depth + 1)
-                    } else {
-                        panic!("filtered to items but found a non item?")
-                    }
-                })
+            stmts.iter().for_each(|item| {
+                if let syn::Stmt::Item(item) = item {
+                    traverse_item(item, depth + 1)
+                }
+            })
         }
 
         // mod x or mod x { }
@@ -105,6 +109,11 @@ fn traverse_item(item: &syn::Item, depth: u32) {
         // struct x { }
         syn::Item::Struct(strct) => {
             let x = rocket_struct::RocketStruct::parse_struct(strct);
+            println!("{:#?}", x);
+        }
+
+        syn::Item::Enum(enm) => {
+            let x = rocket_enum::RocketEnum::parse_enum(enm);
             println!("{:#?}", x);
         }
         _ => (),

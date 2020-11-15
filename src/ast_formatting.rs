@@ -21,6 +21,17 @@ pub fn format_idnt(ident: &syn::Ident) -> String {
     ident.to_string()
 }
 
+pub fn format_lit(lit: &syn::Lit) -> String {
+    match lit {
+        syn::Lit::Str(str) => str.value(),
+        syn::Lit::Int(num) => num.to_string(),
+        syn::Lit::Char(ch) => ch.value().to_string(),
+        syn::Lit::Float(fl) => fl.to_string(),
+        syn::Lit::Bool(bool) => bool.value.to_string(),
+        _ => format!("{}", quote!(#lit)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
