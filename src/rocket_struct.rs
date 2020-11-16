@@ -106,8 +106,8 @@ mod test {
             RocketStruct {
                 ident: "Point".to_string(),
                 fields: vec![
-                    ("0".to_string(), "i32".to_string()),
-                    ("1".to_string(), "i32".to_string())
+                    (0.to_string(), "i32".to_string()),
+                    (1.to_string(), "i32".to_string())
                 ],
                 response: None,
             },
@@ -130,7 +130,7 @@ mod test {
             result,
             RocketStruct {
                 ident: "MyResponse".to_string(),
-                fields: vec![("0".to_string(), "String".to_string())],
+                fields: vec![(0.to_string(), "String".to_string())],
                 response: Some(ResponseAttribute {
                     status: 404,
                     content_type: None

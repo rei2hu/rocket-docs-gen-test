@@ -23,7 +23,7 @@ pub struct ResponseAttribute {
 }
 
 impl RocketAttribute {
-    fn from_attributes(attrs: &Vec<syn::Attribute>) -> Vec<Self> {
+    pub fn from_attributes(attrs: &Vec<syn::Attribute>) -> Vec<Self> {
         fn nested_kv_to_hashmap(
             nested: &syn::punctuated::Punctuated<syn::NestedMeta, syn::token::Comma>,
         ) -> HashMap<String, String> {
