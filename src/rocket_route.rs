@@ -3,14 +3,14 @@ use crate::rocket_attribute::{RocketAttribute, RouteAttribute};
 /// the only functions we are interested in are ones with the route attributes.
 /// these represent the routes that are exposed.
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 pub struct RocketRoute {
     ident: String,
     handler: Function,
     route: RouteAttribute,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 struct Function {
     args: Vec<(String, String)>,
     ret: String,

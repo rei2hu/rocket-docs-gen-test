@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 pub enum RocketAttribute {
     DeriveResponder,
     Response(ResponseAttribute),
     Route(RouteAttribute),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 pub struct RouteAttribute {
     pub method: String,
     pub path: String,
@@ -16,7 +16,7 @@ pub struct RouteAttribute {
     pub data: Option<String>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 pub struct ResponseAttribute {
     pub status: u32,
     pub content_type: Option<String>,

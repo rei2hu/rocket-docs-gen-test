@@ -7,7 +7,7 @@ use crate::rocket_attribute::{ResponseAttribute, RocketAttribute};
 /// in the second scenario, it should derive Responder and also have a response
 /// attrbute with status/content_type information
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 pub struct RocketStruct {
     ident: String,
     // so for unnamed ill just go with (0, type), (1, type) like a fake array

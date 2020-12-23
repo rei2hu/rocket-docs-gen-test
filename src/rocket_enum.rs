@@ -4,13 +4,13 @@ use crate::rocket_attribute::{ResponseAttribute, RocketAttribute};
 /// in responses. the variants will have response attributes with status and
 /// content_type information
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 pub struct RocketEnum {
     ident: String,
     variants: Vec<RocketVariant>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, serde::Serialize)]
 struct RocketVariant {
     ident: String,
     response: ResponseAttribute,

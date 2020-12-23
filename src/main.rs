@@ -72,6 +72,10 @@ fn traverse_items(items: &Vec<syn::Item>, depth: u32) {
     items.iter().for_each(|item| traverse_item(item, depth));
 }
 
+fn print_json<'a>(str: impl serde::Serialize) {
+    println!("{}", serde_json::to_string(&str).unwrap());
+}
+
 fn traverse_item(item: &syn::Item, depth: u32) {
     match item {
         // fn x { }
@@ -85,7 +89,7 @@ fn traverse_item(item: &syn::Item, depth: u32) {
         ) => {
             let x = rocket_route::RocketRoute::parse_fn(function);
             if x.is_some() {
-                println!("{:#?}", x.unwrap());
+                print_json(x.unwrap());
             }
 
             stmts.iter().for_each(|item| {
@@ -109,12 +113,12 @@ fn traverse_item(item: &syn::Item, depth: u32) {
         // struct x { }
         syn::Item::Struct(strct) => {
             let x = rocket_struct::RocketStruct::parse_struct(strct);
-            println!("{:#?}", x);
+            print_json(x);
         }
 
         syn::Item::Enum(enm) => {
             let x = rocket_enum::RocketEnum::parse_enum(enm);
-            println!("{:#?}", x);
+            print_json(x.unwrap());
         }
         _ => (),
     };
